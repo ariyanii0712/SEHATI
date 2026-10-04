@@ -1,0 +1,18 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /sehati/
+
+# Don't rewrite admin directory
+RewriteCond %{REQUEST_URI} ^/sehati/admin [NC]
+RewriteRule ^ - [L]
+
+# Don't rewrite if already going to frontend (prevent loop)
+RewriteCond %{REQUEST_URI} ^/sehati/frontend [NC]
+RewriteRule ^ - [L]
+
+# Don't rewrite common asset/backend directories
+RewriteCond %{REQUEST_URI} ^/sehati/(includes|uploads|config|visitor|ajax) [NC]
+RewriteRule ^ - [L]
+
+# Rewrite everything else to frontend
+RewriteRule ^(.*)$ frontend/$1 [L]
