@@ -103,31 +103,32 @@ if (!function_exists('getOpenDays')) {
                 continue;
             }
             
-            if (strpos($line, ':') !== false) {
-                $day_part = explode(':', $line)[0];
-                $day_part = trim($day_part);
-                
-                if (strpos($day_part, '–') !== false) {
-                    $range = explode('–', $day_part);
-                    $start = trim($range[0]);
-                    $end = trim($range[1]);
+            // Extract ranges like Senin-Kamis or Senin–Kamis
+            if (preg_match_all('/([A-Za-z]+)\s*[-–—]\s*([A-Za-z]+)/u', $line, $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $start = ucfirst(strtolower(trim($match[1])));
+                    $end = ucfirst(strtolower(trim($match[2])));
                     
                     $start_idx = array_search($start, $days);
                     $end_idx = array_search($end, $days);
                     
-                    if ($start_idx !== false && $end_idx !== false) {
+                    if ($start_idx !== false && $end_idx !== false && $start_idx <= $end_idx) {
                         for ($i = $start_idx; $i <= $end_idx; $i++) {
                             $open_days[] = $days[$i];
                         }
                     }
-                } else {
-                    if (in_array($day_part, $days)) {
-                        $open_days[] = $day_part;
-                    }
+                }
+            }
+            
+            // Extract single days
+            foreach ($days as $d) {
+                // regex to match the day name as a whole word to avoid partial matches
+                if (preg_match('/\b' . $d . '\b/i', $line)) {
+                    $open_days[] = $d;
                 }
             }
         }
         
-        return array_unique($open_days);
+        return array_values(array_unique($open_days));
     }
 }

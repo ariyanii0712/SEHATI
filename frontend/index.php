@@ -4,7 +4,7 @@ require_once '../config/database.php';
 
 $active_queue = null;
 $history = [];
-$upcoming = null;
+$upcoming_list = [];
 
 if (isset($_SESSION['user_id'])) {
     $user_id = $conn->real_escape_string($_SESSION['user_id']);
@@ -61,10 +61,21 @@ if (isset($_SESSION['user_id'])) {
                    WHERE p.user_id = '$user_id' 
                    AND p.tanggal_kunjungan > '$today'
                    AND p.status IN ('terjadwal', 'menunggu')
-                   ORDER BY p.tanggal_kunjungan ASC LIMIT 1";
+                   ORDER BY p.tanggal_kunjungan ASC, p.waktu_kunjungan ASC";
     $res_up = $conn->query($q_upcoming);
+    $upcoming_list = [];
     if ($res_up && $res_up->num_rows > 0) {
-        $upcoming = $res_up->fetch_assoc();
+        $first_date = null;
+        while ($row = $res_up->fetch_assoc()) {
+            if ($first_date === null) {
+                $first_date = $row['tanggal_kunjungan'];
+            }
+            if ($row['tanggal_kunjungan'] === $first_date) {
+                $upcoming_list[] = $row;
+            } else {
+                break;
+            }
+        }
     }
 }
 ?>
@@ -406,7 +417,15 @@ if (isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Pengingat Jadwal (If Any) -->
-            <?php if ($upcoming): ?>
+            <?php if (!empty($upcoming_list)): 
+                $count = count($upcoming_list);
+                $days_left = $upcoming_list[0]['days_left'];
+                if ($count == 1) {
+                    $text = "Anda memiliki jadwal <span class=\"font-bold text-slate-700\">" . htmlspecialchars($upcoming_list[0]['nama_poli']) . "</span> dalam " . $days_left . " hari ke depan.";
+                } else {
+                    $text = "Anda memiliki <span class=\"font-bold text-slate-700\">" . $count . " jadwal berobat</span> dalam " . $days_left . " hari ke depan.";
+                }
+            ?>
             <div class="bg-gradient-to-r from-blue-50 to-[#F6F9F9] border border-blue-100 rounded-2xl p-5 mb-8 flex items-center justify-between shadow-sm hover-lift">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 text-[#0fb7b8] text-2xl flex items-center justify-center animate-bounce">
@@ -414,7 +433,7 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                     <div>
                         <h4 class="font-bold text-[#413074] text-sm">Pengingat Jadwal</h4>
-                        <p class="text-xs text-slate-500 mt-0.5">Anda memiliki jadwal <span class="font-bold text-slate-700"><?= htmlspecialchars($upcoming['nama_poli']) ?></span> dalam <?= $upcoming['days_left'] ?> hari ke depan.</p>
+                        <p class="text-xs text-slate-500 mt-0.5"><?= $text ?></p>
                     </div>
                 </div>
                 <a href="jadwal.php" class="px-4 py-2 bg-white border border-slate-200 text-[#413074] text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors whitespace-nowrap shadow-sm">
