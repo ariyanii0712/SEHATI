@@ -38,16 +38,22 @@ if (isset($_SESSION['user_id'])) {
     }
 
     // Recent History (max 3)
-    $q_hist = "SELECT p.*, f.nama as faskes_nama, po.nama_poli 
+    $q_hist = "SELECT p.*, f.nama as faskes_nama, po.nama_poli, jp.waktu_selesai 
                FROM pendaftaran p
                JOIN faskes f ON p.faskes_id = f.id
                JOIN poli po ON p.poli_id = po.id
+               LEFT JOIN jadwal_poli jp ON p.faskes_id = jp.faskes_id AND p.poli_id = jp.poli_id AND p.tanggal_kunjungan = jp.tanggal AND p.waktu_kunjungan = jp.waktu_mulai
                WHERE p.user_id = '$user_id' 
-               AND p.status IN ('selesai', 'batal')
+               AND (p.status IN ('selesai', 'batal') OR 
+                    (p.status = 'terjadwal' AND (p.tanggal_kunjungan < '$today' OR (p.tanggal_kunjungan = '$today' AND COALESCE(jp.waktu_selesai, p.waktu_kunjungan) < '$now')))
+                   )
                ORDER BY p.tanggal_kunjungan DESC, p.waktu_daftar DESC LIMIT 3";
     $res_hist = $conn->query($q_hist);
     if ($res_hist) {
         while($row = $res_hist->fetch_assoc()) {
+            if ($row['status'] === 'terjadwal') {
+                $row['status'] = 'terlewat';
+            }
             $history[] = $row;
         }
     }
